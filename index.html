@@ -1,0 +1,1682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Event Dashboard V9</title>
+
+    <!-- Preconnect for faster font loading -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <!-- Fonts & Icons CDN -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Phosphor Icons: This single script provides both outline (ph-bold) and filled (ph-fill) icons via class names -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <!-- Combined STYLES (Global, Layout, and Component-specific) -->
+    <style>
+        /* style.css - Global Styles and Layout */
+        :root {
+            --font-family: 'Inter', sans-serif;
+            --timing-fast: 0.2s ease;
+            --timing-medium: 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+            --timing-modal-in: 0.4s cubic-bezier(0.34, 1.56, 0.64, 1.0); /* Snappier pop-in */
+            --timing-modal-out: 0.3s cubic-bezier(0.55, 0.085, 0.68, 0.53); /* Smooth shrink-out */
+            --reminder-bar-height: 40px; /* Define explicit height for fixed bar */
+            
+            /* Light Theme Colors */
+            --light-bg: #f5f7fa;
+            --light-text: #1a1c2c;
+            --light-text-secondary: #5a5d7c;
+            --light-card-bg: rgba(255, 255, 255, 0.6);
+            --light-card-border: rgba(0, 0, 0, 0.08);
+            --light-accent-glow: rgba(76, 96, 226, 0.3);
+            --light-accent: #4c60e2;
+            --light-error: #e04242;
+            --light-success: #24b37e;
+
+            /* Dark Theme Colors */
+            --dark-bg: #10121a;
+            --dark-text: #e0e2f0;
+            --dark-text-secondary: #8c90b6;
+            --dark-card-bg: rgba(30, 32, 54, 0.4);
+            --dark-card-border: rgba(255, 255, 255, 0.1);
+            --dark-accent-glow: rgba(94, 150, 255, 0.3);
+            --dark-accent: #5e96ff;
+            --dark-error: #ff7f7f;
+            --dark-success: #6fe2b2;
+        }
+
+        /* 1. Global Resets & Typography */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { font-size: 16px; scroll-behavior: smooth; }
+        
+        body { 
+            font-family: var(--font-family);
+            background-color: var(--light-bg);
+            color: var(--light-text); 
+            transition: background-color var(--timing-medium), color var(--timing-medium);
+            overflow-x: hidden;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding-top: var(--reminder-bar-height); /* Push content down to avoid reminder bar overlap */
+        }
+        
+        /* Dark Theme specific overrides */
+        body.dark-theme { background-color: var(--dark-bg); color: var(--dark-text); }
+        
+        /* Layout & Structure */
+        .container { max-width: 900px; margin: 0 auto; padding: 0 1rem 6rem; flex-grow: 1; }
+        
+        /* Sticky Header */
+        .sticky-header { 
+            position: sticky; 
+            top: var(--reminder-bar-height); /* Position sticky header correctly below reminder bar */
+            background: color-mix(in srgb, var(--light-bg) 80%, transparent); 
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            z-index: 500; padding: 1rem 0; margin-bottom: 2rem; border-bottom: 1px solid var(--light-card-border); 
+            transition: background-color var(--timing-medium), border-color var(--timing-fast); 
+        }
+        .dark-theme .sticky-header { 
+            background: color-mix(in srgb, var(--dark-bg) 80%, transparent);
+            border-bottom: 1px solid var(--dark-card-border); 
+        }
+        
+        header { display: flex; justify-content: space-between; align-items: center; }
+        header h1 { font-size: 1.5rem; font-weight: 700; }
+        .top-controls { display: flex; align-items: center; gap: 0.75rem; }
+        
+        /* Controls Container (Search & Filter) */
+        .controls-container { display: grid; grid-template-columns: 1fr; gap: 1rem; margin-top: 1.5rem; }
+
+        /* Form Elements - General Styling */
+        input, select, textarea { 
+            width: 100%; padding: 0.8rem 1rem; font-family: var(--font-family); font-size: 1rem; border-radius: 10px; 
+            background: var(--light-card-bg); color: var(--light-text); border: 1px solid var(--light-card-border); 
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            transition: all var(--timing-fast); appearance: none; -webkit-appearance: none;
+        }
+        input:focus, select:focus, textarea:focus { outline: none; box-shadow: 0 0 0 3px var(--light-accent-glow); border-color: var(--light-accent); }
+        body.dark-theme input, body.dark-theme select, body.dark-theme textarea { background: var(--dark-card-bg); color: var(--dark-text); border: 1px solid var(--dark-card-border); }
+        body.dark-theme input:focus, body.dark-theme select:focus, body.dark-theme textarea:focus { box-shadow: 0 0 0 3px var(--dark-accent-glow); border-color: var(--dark-accent); }
+        ::placeholder { color: var(--light-text-secondary); opacity: 0.8;}
+        .dark-theme ::placeholder { color: var(--dark-text-secondary); }
+
+        /* General Buttons */
+        .btn { 
+            padding: 0.7rem 1.2rem; border-radius: 8px; border: none; cursor: pointer; 
+            font-weight: 600; font-family: var(--font-family); font-size: 0.9rem; transition: all var(--timing-fast);
+            display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+        }
+        .primary-btn { background-color: var(--light-accent); color: white; }
+        .primary-btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+        .primary-btn:active { filter: brightness(0.9); transform: translateY(1px); }
+
+        .secondary-btn { background: transparent; border: 1px solid var(--light-card-border); color: var(--light-text); }
+        .secondary-btn:hover { background-color: color-mix(in srgb, var(--light-text) 5%, transparent); transform: translateY(-1px); }
+        .secondary-btn:active { background-color: color-mix(in srgb, var(--light-text) 10%, transparent); transform: translateY(1px); }
+
+        .dark-theme .primary-btn { background-color: var(--dark-accent); }
+        .dark-theme .secondary-btn { border-color: var(--dark-card-border); color: var(--dark-text); }
+        .dark-theme .secondary-btn:hover { background-color: color-mix(in srgb, var(--dark-text) 5%, transparent); }
+        .dark-theme .secondary-btn:active { background-color: color-mix(in srgb, var(--dark-text) 10%, transparent); }
+
+        .btn:focus-visible { outline: 3px solid var(--light-accent-glow); outline-offset: 2px; }
+        .dark-theme .btn:focus-visible { outline-color: var(--dark-accent-glow); }
+
+        /* Utility Class */
+        .hidden { display: none !important; }
+
+        /* Form Error Handling */
+        .form-group .error-message {
+            color: var(--light-error);
+            font-size: 0.8rem;
+            margin-top: 0.4rem;
+            height: 1.2em; /* Reserve space to prevent layout shifts */
+            overflow: hidden;
+        }
+        .dark-theme .form-group .error-message { color: var(--dark-error); }
+        .form-group input.invalid,
+        .form-group textarea.invalid {
+            border-color: var(--light-error);
+            box-shadow: 0 0 0 2px var(--light-error);
+        }
+        .dark-theme .form-group input.invalid,
+        .dark-theme .form-group textarea.invalid {
+            border-color: var(--dark-error);
+            box-shadow: 0 0 0 2px var(--dark-error);
+        }
+        .required-star { color: var(--light-error); font-weight: bold; margin-left: 2px; }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 1rem;
+            color: var(--light-text-secondary);
+            animation: fadeIn 0.8s ease-out forwards;
+        }
+        .dark-theme .empty-state { color: var(--dark-text-secondary); }
+        .empty-state h2 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+        .empty-state p { font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
+        .empty-state p .ph { font-size: 1.2rem; color: var(--light-accent); }
+        .dark-theme .empty-state p .ph { color: var(--dark-accent); }
+
+        /* Confetti Overlay Styling */
+        body.confetti-active { overflow: hidden; /* Prevent scroll on confetti */ }
+
+        /* components.css - Component Specific Styling */
+
+        /* View & Theme Switcher */
+        .view-switcher, .theme-switcher { display: flex; align-items: center; padding: 4px; border-radius: 99px; background-color: color-mix(in srgb, var(--light-text) 5%, transparent); }
+        .dark-theme .view-switcher, .dark-theme .theme-switcher { background-color: color-mix(in srgb, var(--dark-text) 5%, transparent); }
+        .view-switcher button, .theme-switcher button { 
+            background: transparent; border: none; width: 32px; height: 32px; border-radius: 50%; display: grid; 
+            place-items: center; font-size: 1.2rem; cursor: pointer; color: var(--light-text-secondary); 
+            transition: all var(--timing-fast);
+        }
+        .dark-theme .view-switcher button, .dark-theme .theme-switcher button { color: var(--dark-text-secondary); }
+        .view-switcher button:hover, .theme-switcher button:hover { background-color: color-mix(in srgb, var(--light-text) 8%, transparent); transform: translateY(-1px); }
+        .dark-theme .view-switcher button:hover, .dark-theme .theme-switcher button:hover { background-color: color-mix(in srgb, var(--dark-text) 8%, transparent); }
+
+        .view-switcher button.active, .theme-switcher button.active { background-color: var(--light-accent); color: white; }
+        .dark-theme .view-switcher button.active, .dark-theme .theme-switcher button.active { background-color: var(--dark-accent); }
+        .view-switcher button.active:hover, .theme-switcher button.active:hover { filter: brightness(1.1); transform: translateY(0); }
+        .view-switcher button:focus-visible, .theme-switcher button:focus-visible { outline: 3px solid var(--light-accent-glow); outline-offset: 2px; }
+
+        /* LIST VIEW */
+        #list-view { display: grid; gap: 1rem; }
+        .event-card {
+            background: var(--light-card-bg); border: 1px solid var(--light-card-border); border-radius: 16px;
+            padding: 1rem; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            /* Include animation and transitions here for new cards and updates */
+            transition: transform var(--timing-fast), box-shadow var(--timing-fast), border-color 0.3s ease, margin-bottom 0.4s ease;
+            animation: fadeIn 0.5s var(--timing-medium) both; animation-delay: calc(var(--animation-order, 0) * 80ms);
+            position: relative; /* Needed for animations if any */
+            outline: none; /* remove default outline for better focus styles */
+        }
+        .dark-theme .event-card { background: var(--dark-card-bg); border-color: var(--dark-card-border); }
+
+        /* Animation for initial card appearance */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Animation for card edit feedback */
+        @keyframes highlightBorder {
+            0% { box-shadow: 0 0 0 0px var(--light-accent-glow); }
+            50% { box-shadow: 0 0 0 6px var(--light-accent-glow); }
+            100% { box-shadow: 0 0 0 0px var(--light-accent-glow); }
+        }
+        @keyframes highlightBorder-dark {
+            0% { box-shadow: 0 0 0 0px var(--dark-accent-glow); }
+            50% { box-shadow: 0 0 0 6px var(--dark-accent-glow); }
+            100% { box-shadow: 0 0 0 0px var(--dark-accent-glow); }
+        }
+        .event-card.highlight {
+            animation: highlightBorder 0.6s ease-out;
+        }
+        .dark-theme .event-card.highlight {
+            animation-name: highlightBorder-dark;
+        }
+        /* Style for cards being deleted */
+        .event-card.deleting {
+            opacity: 0 !important; /* Force fade out */
+            transform: translateX(100%) !important; /* Slide out right */
+            /* Add margin-bottom to make other elements shift smoothly */
+            margin-bottom: -150px; /* Adjust based on typical card height */
+            transition: opacity 0.4s cubic-bezier(0.55, 0.085, 0.68, 0.53), transform 0.4s cubic-bezier(0.55, 0.085, 0.68, 0.53), margin-bottom 0.4s ease;
+        }
+
+        .event-card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1); }
+        .event-card:focus-visible { outline: 3px solid var(--light-accent-glow); }
+        .dark-theme .event-card:focus-visible { outline-color: var(--dark-accent-glow); }
+        
+        .event-card-header { display: flex; justify-content: space-between; align-items: flex-start; flex-direction: column; gap: 0.5rem; }
+        .event-card-title { flex-grow: 1; }
+        .event-card-title h3 { font-size: 1.1rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; }
+        .event-card-title p { color: var(--light-text-secondary); font-size: 0.85rem; margin-top: 0.2rem; }
+        .dark-theme .event-card-title p { color: var(--dark-text-secondary); }
+        .countdown { font-size: 1.5rem; font-weight: 700; text-align: left; }
+        .countdown-label { font-size: 0.8rem; text-align: left; color: var(--light-text-secondary); text-transform: uppercase; letter-spacing: 0.5px;}
+        .dark-theme .countdown-label { color: var(--dark-text-secondary); }
+        .event-info-subtext {
+            font-size: 0.85rem;
+            color: var(--light-text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 0.3em;
+            margin-top: 0.2em;
+            font-weight: 500;
+        }
+        .dark-theme .event-info-subtext { color: var(--dark-text-secondary); }
+        .event-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
+        .tag { background: color-mix(in srgb, var(--light-text) 5%, transparent); color: var(--light-text-secondary); font-size: 0.75rem; font-weight: 500; padding: 0.25rem 0.6rem; border-radius: 99px; }
+        .dark-theme .tag { background: color-mix(in srgb, var(--dark-text) 5%, transparent); color: var(--dark-text-secondary); }
+
+        .event-details { border-top: 1px solid var(--light-card-border); margin-top: 1rem; padding-top: 1rem; }
+        .dark-theme .event-details { border-top-color: var(--dark-card-border); }
+        .event-details h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; }
+        .note, .tasks { font-size: 0.9rem; color: var(--light-text-secondary); white-space: pre-wrap; word-wrap: break-word; line-height: 1.5; }
+        .dark-theme .note, .dark-theme .tasks { color: var(--dark-text-secondary); }
+
+        .card-actions { display: flex; justify-content: flex-end; align-items: center; gap: 0.5rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--light-card-border); }
+        .dark-theme .card-actions { border-top-color: var(--dark-card-border); }
+
+        /* Event States (Priority, Today) */
+        .priority-event { border-left: 4px solid var(--light-accent); }
+        .dark-theme .priority-event { border-left-color: var(--dark-accent); }
+        .priority-icon { color: var(--light-accent); }
+        .dark-theme .priority-icon { color: var(--dark-accent); }
+
+        .today-event {
+            box-shadow: 0 0 15px 0px var(--light-accent-glow);
+            border-color: var(--light-accent) !important;
+        }
+        .dark-theme .today-event { box-shadow: 0 0 20px 2px var(--dark-accent-glow); }
+        .today-event .countdown { color: var(--light-accent); animation: pulseGlowText 2s infinite; }
+        .dark-theme .today-event .countdown { color: var(--dark-accent); }
+        @keyframes pulseGlowText { 0%{opacity:1;} 50%{opacity:0.6;} 100%{opacity:1;} }
+        
+        /* Modals, FAB & Overlays */
+        .fab {
+            position: fixed; bottom: 1.5rem; right: 1.5rem; width: 56px; height: 56px; border-radius: 50%;
+            background-color: var(--light-accent); color: white; border: none; display: grid; place-items: center; 
+            font-size: 1.75rem; cursor: pointer; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2); 
+            transition: all var(--timing-fast); z-index: 999;
+        }
+        .dark-theme .fab { background-color: var(--dark-accent); }
+        .fab:hover { transform: scale(1.1); box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3); }
+        .fab:active { transform: scale(0.9); box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2); }
+        .fab:focus-visible { outline: 3px solid var(--light-accent-glow); outline-offset: 2px; }
+
+        .modal-overlay { 
+            position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); 
+            z-index: 1000; display: flex; justify-content: center; align-items: center; 
+            opacity: 0; visibility: hidden; transition: opacity var(--timing-modal-out) ease, visibility 0s var(--timing-modal-out) linear; padding: 1rem;
+        }
+        .modal-overlay.visible { opacity: 1; visibility: visible; transition-delay: 0s; }
+        .modal-content { 
+            background: var(--light-bg); border-radius: 20px; width: 100%; max-width: 500px; padding: 1.5rem; 
+            transform: translateY(20px) scale(0.9); opacity: 0;
+            transition: transform var(--timing-modal-in), opacity var(--timing-modal-in); 
+            max-height: 90vh; overflow-y: auto; box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+        }
+        .modal-overlay.visible .modal-content { transform: translateY(0) scale(1); opacity: 1; }
+        .dark-theme .modal-content { background: var(--dark-bg); }
+        #modal-title { margin-bottom: 1.5rem; text-align: center; font-size: 1.25rem; }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; }
+        .form-row { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+        .form-group.priority-group { display: flex; align-items: center; gap: 0.5rem; }
+        /* Style the checkbox itself to be visible beside the label */
+        #event-priority { width: 18px; height: 18px; margin-top: 0.2em; /* Align vertically with label */ border-radius: 4px; border: 1px solid var(--light-card-border); appearance: checkbox; -webkit-appearance: checkbox;}
+        .dark-theme #event-priority { border-color: var(--dark-card-border); }
+        .form-buttons { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem; }
+        #confirm-modal-content { padding: 1.5rem; } #confirm-modal-content h3 { margin-bottom: 1rem; }
+        #confirm-modal-content p { color: var(--light-text-secondary); margin-bottom: 2rem; }
+        .dark-theme #confirm-modal-content p { color: var(--dark-text-secondary); }
+        /* For loading states on buttons (spinner) */
+        .btn.loading {
+            cursor: wait;
+            opacity: 0.7;
+            pointer-events: none; /* Disable clicks during loading */
+        }
+        .btn.loading .loading-spinner { animation: spin 1s linear infinite; }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Reminder Bar */
+        #reminder-bar { 
+            position: fixed; top: 0; left: 0; width: 100%; 
+            background: var(--light-accent); 
+            color: white; 
+            z-index: 1001; 
+            transform: translateY(-100%); 
+            transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            height: var(--reminder-bar-height); 
+            display: flex; /* Flex to center content */
+            align-items: center;
+            justify-content: center; /* Centers the .reminder-content horizontally */
+            padding: 0; /* Remove padding here, move to .reminder-content */
+        }
+        #reminder-bar.visible { transform: translateY(0); }
+        .dark-theme #reminder-bar { background: var(--dark-accent); }
+        
+        .reminder-content {
+            text-align: center;
+            font-weight: 500;
+            line-height: 1.4; /* Improved readability */
+            width: 100%;
+            max-width: 900px; /* Constrain content width */
+            padding: 0.8rem 1rem; /* Padding for the inner content */
+            box-sizing: border-box; /* Include padding in width */
+            font-size: 0.9rem;
+        }
+
+        /* Enhanced highlight text */
+        #reminder-bar .highlight-text { 
+            font-weight: 700; 
+            color: white; 
+            text-shadow: 0 0 5px rgba(255,255,255,0.7); /* Slightly stronger glow */
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem; /* Space between icon/emoji and text */
+            flex-wrap: wrap; /* Allow highlight text to wrap if it's too long */
+            justify-content: center; /* Center highlight content if it wraps */
+        }
+        /* Icon styling within reminder bar */
+        #reminder-bar .highlight-text .ph-fill {
+            font-size: 1.2em; /* Make icons slightly bigger than surrounding text */
+            filter: drop-shadow(0 0 2px rgba(255,255,255,0.5)); /* Subtle icon glow */
+            flex-shrink: 0; /* Prevent icons from shrinking */
+        }
+        
+        footer {
+            text-align: center; padding: 2rem 1rem 1.5rem; color: var(--light-text-secondary);
+            margin-top: auto; /* Push footer to bottom */
+        }
+        footer .io-buttons { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; margin-bottom: 1rem; }
+        .dark-theme footer { color: var(--dark-text-secondary); }
+        footer a { color: inherit; text-decoration: none; font-weight: 600; }
+        footer a:hover { text-decoration: underline; }
+        footer a:focus-visible { outline: 3px solid var(--light-accent-glow); outline-offset: 2px; }
+
+        /* Toast Notifications */
+        #toast-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 2000; display: flex; flex-direction: column; gap: 0.5rem; width: calc(100% - 2rem); max-width: 400px; }
+        .toast { padding: 0.8rem 1.2rem; background: rgba(30, 32, 54, 0.9); color: white; border-radius: 10px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); font-weight: 500; font-size: 0.9rem; box-shadow: 0 4px 20px rgba(0,0,0,0.2); animation: toastIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards, toastOut 0.3s ease 2.7s forwards; display: flex; align-items: center; gap: 0.75rem; }
+        .toast i { font-size: 1.1rem; }
+        .toast.success { background: rgba(36, 179, 126, 0.9); }
+        .toast.error { background: rgba(224, 66, 66, 0.9); }
+        .toast.info { background: rgba(56, 116, 226, 0.9); }
+
+        @keyframes toastIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); }}
+        @keyframes toastOut { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(20px); }}
+        
+        /* Media Queries for Responsiveness */
+        @media (min-width: 640px) { /* Tablets and larger */
+            .container { padding: 0 1.5rem 6rem; }
+            header h1 { font-size: 1.75rem; }
+            .controls-container { grid-template-columns: 1fr 1fr; }
+            .event-card { padding: 1.5rem; }
+            .event-card-header { flex-direction: row; align-items: flex-start; }
+            .countdown, .countdown-label { text-align: right; }
+            .form-row { grid-template-columns: 1fr 1fr; }
+            footer .io-buttons { gap: 1rem; }
+            .btn { padding: 0.8rem 1.8rem; font-size: 1rem; }
+            .fab { right: 2rem; bottom: 2rem; }
+            .toast { width: auto; max-width: 450px; }
+            .reminder-content { font-size: 1rem; padding: 0.9rem 1.5rem; }
+        }
+
+        @media (min-width: 900px) { /* Desktops and larger */
+            .container { padding-left: 0; padding-right: 0; }
+        }
+
+    </style>
+</head>
+<body class="dark-theme"> <!-- Default to dark theme for consistency with original -->
+
+    <div id="reminder-bar" role="alert" aria-live="polite" aria-hidden="true">
+        <div class="reminder-content"></div>
+    </div>
+
+    <div class="container">
+        <div class="sticky-header">
+            <header role="banner">
+                <h1>Event Dashboard</h1>
+                <nav class="top-controls" aria-label="Main Navigation">
+                    <div class="view-switcher" role="radiogroup" aria-label="View Switcher">
+                        <!-- Only List View Button remains -->
+                        <button id="view-list-btn" class="active" title="List View" role="radio" aria-checked="true" aria-label="Switch to List View">
+                            <i class="ph-bold ph-list" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <div class="theme-switcher" role="radiogroup" aria-label="Theme Switcher">
+                        <button id="theme-light-btn" title="Light Theme" role="radio" aria-checked="false" aria-label="Switch to Light Theme">
+                            <i class="ph-bold ph-sun" aria-hidden="true"></i>
+                        </button>
+                        <button id="theme-dark-btn" class="active" title="Dark Theme" role="radio" aria-checked="true" aria-label="Switch to Dark Theme">
+                            <i class="ph-bold ph-moon" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </nav>
+            </header>
+            <section class="controls-container" aria-label="Event Filtering and Search">
+                <input type="text" id="search-input" placeholder="Search name, notes, tags..." aria-label="Search events">
+                <select id="filter-tag" aria-label="Filter by tag">
+                    <option value="all">All Tags</option>
+                </select>
+            </section>
+        </div>
+        
+        <main role="main">
+            <div id="list-view" role="list" aria-live="polite"></div>
+            <!-- Calendar view removed -->
+            <div id="no-events-message" class="empty-state hidden" aria-live="polite">
+                <h2>No events found.</h2>
+                <p>Click the <i class="ph ph-plus" aria-hidden="true"></i> button to begin!</p>
+            </div>
+        </main>
+    </div>
+    
+    <button id="add-event-btn" class="fab" title="Add New Event" aria-label="Add New Event">
+        <i class="ph ph-plus" aria-hidden="true"></i>
+    </button>
+
+    <!-- Modals -->
+    <div id="event-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="modal-content">
+            <h2 id="modal-title">Add New Event</h2>
+            <form id="event-form" novalidate>
+                <div class="form-group">
+                    <label for="event-name">Event Name <span class="required-star">*</span></label>
+                    <input type="text" id="event-name" required placeholder="e.g., Mom's Birthday" aria-required="true">
+                    <div class="error-message" id="event-name-error" aria-live="polite"></div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="event-type">Event Type</label>
+                        <select id="event-type" required>
+                            <option value="general">General Event</option>
+                            <option value="birthday">Birthday</option>
+                            <option value="anniversary">Anniversary</option>
+                            <option value="custom">Custom Event Type</option> <!-- New option -->
+                        </select>
+                    </div>
+                    <div class="form-group" id="date-group-dynamic">
+                        <!-- Label and input for event date will be updated by JS -->
+                        <label for="event-date">Date <span class="required-star">*</span></label>
+                        <input type="date" id="event-date" required aria-required="true">
+                        <div class="error-message" id="event-date-error" aria-live="polite"></div>
+                    </div>
+                </div>
+                
+                <!-- New: Custom Event Type Label Field -->
+                <div class="form-group hidden" id="event-custom-type-group">
+                    <label for="event-custom-type-label">Custom Label <span class="required-star">*</span></label>
+                    <input type="text" id="event-custom-type-label" placeholder="e.g., Exam, Doctor Appointment" />
+                    <div class="error-message" id="event-custom-type-label-error" aria-live="polite"></div>
+                </div>
+
+                <div class="form-group" id="event-repeat-group">
+                    <label for="event-repeat">Repeats</label>
+                    <select id="event-repeat" required>
+                        <option value="yearly">Yearly</option>
+                        <option value="monthly">Monthly</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="none">One-time event</option>
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="event-tags">Tags (comma separated)</label>
+                        <input type="text" id="event-tags" placeholder="family, important">
+                    </div>
+                    <div class="form-group priority-group">
+                        <input type="checkbox" id="event-priority">
+                        <label for="event-priority">High Priority</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="event-tasks">Gift Ideas / Tasks (one per line)</label>
+                    <textarea id="event-tasks" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="event-note">General Note</label><textarea id="event-note" rows="2"></textarea>
+                </div>
+                <div class="form-buttons">
+                    <button type="button" class="btn secondary-btn" data-action="cancel">Cancel</button>
+                    <button type="submit" class="btn primary-btn" id="save-event-btn">
+                        Save Event
+                        <!-- Optional spinner: <i class="ph ph-circle-notch loading-spinner hidden" aria-hidden="true"></i> -->
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div id="confirm-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+        <div id="confirm-modal-content" class="modal-content">
+            <h3 id="confirm-title">Are you sure?</h3>
+            <p id="confirm-text"></p>
+            <div class="form-buttons">
+                <button type="button" id="confirm-cancel-btn" class="btn secondary-btn">Cancel</button>
+                <button type="button" id="confirm-ok-btn" class="btn primary-btn">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+    <footer role="contentinfo">
+        <div class="io-buttons">
+            <button id="export-btn" class="btn secondary-btn" aria-label="Export events as JSON">
+                <i class="ph ph-download-simple" aria-hidden="true"></i> Export
+            </button>
+            <button id="import-btn" class="btn secondary-btn" aria-label="Import events from JSON file">
+                <i class="ph ph-upload-simple" aria-hidden="true"></i> Import
+            </button>
+            <button id="clear-all-btn" class="btn secondary-btn" aria-label="Clear all event data">
+                <i class="ph ph-trash-simple" aria-hidden="true"></i> Clear All
+            </button>
+            <input type="file" id="import-file" accept=".json" class="hidden">
+        </div>
+        <p>Crafted with <i class="ph-fill ph-heart" style="color:#e24c4c" aria-hidden="true"></i> by <a href="https://github.com/your-github-profile" target="_blank" rel="noopener noreferrer">Kush Sharma</a></p>
+    </footer>
+
+    <!-- All JavaScript Logic -->
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+
+        // 1. Configuration
+        const CONFIG = {
+            LS_KEY: 'eventDashboard_v9',
+            THEME_LS_KEY: 'eventDashboard_theme_v9',
+            TOAST_DURATION: 3000,
+            REMINDER_INTERVAL_MS: 60000 // 1 minute
+        };
+
+        // 2. Global State Management
+        const state = {
+            events: [],
+            currentEditId: null,
+            currentView: 'list', // Force to list view since calendar is removed
+            justEditedEventId: null,
+
+            getEventById(id) {
+                return this.events.find(e => e.id === id);
+            },
+
+            updateEvents(newEvents) {
+                this.events = newEvents;
+                Utils.saveState();
+                Render.renderAll();
+            },
+
+            addEvent(event) {
+                this.events.push(event);
+                Utils.saveState();
+                Render.renderAll();
+            },
+
+            editEvent(id, newEventData) {
+                this.events = this.events.map(ev => ev.id === id ? { ...ev, ...newEventData } : ev);
+                this.justEditedEventId = id; // Set ID for highlighting
+                Utils.saveState();
+                Render.renderAll();
+            },
+
+            deleteEvent(id) {
+                this.events = this.events.filter(ev => ev.id !== id);
+                Utils.saveState();
+                // Render.renderAll() is called by the animation's transitionend listener for smooth removal
+            }
+        };
+
+        // 3. DOM Elements Cache
+        const dom = {}; 
+
+        // 4. Utility Functions
+        const Utils = {
+            lastFocusedElement: null,
+
+            getEl: (id) => document.getElementById(id),
+
+            saveState: () => {
+                localStorage.setItem(CONFIG.LS_KEY, JSON.stringify(state.events));
+            },
+
+            // Added customIcon parameter for more control over toast icon
+            showToast: (message, type = 'info', customIcon = null) => {
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                let iconClass = '';
+                if (customIcon) {
+                    iconClass = customIcon; // Use custom icon if provided
+                } else if (type === 'success') {
+                    iconClass = 'check-circle';
+                } else if (type === 'error') {
+                    iconClass = 'x-circle';
+                } else { // Default 'info' type
+                    iconClass = 'info';
+                }
+
+                toast.innerHTML = `<i class="ph-bold ph-${iconClass}"></i>${message}`;
+                dom.toastContainer.appendChild(toast);
+                
+                toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+                toast.setAttribute('aria-live', 'polite');
+                toast.setAttribute('aria-atomic', 'true');
+
+                setTimeout(() => toast.remove(), CONFIG.TOAST_DURATION);
+            },
+
+            showConfirm: ({ title, text, okLabel = 'Confirm', cancelLabel = 'Cancel' }) => {
+                dom.confirmTitle.textContent = title;
+                dom.confirmText.innerHTML = text;
+                dom.confirmOkBtn.textContent = okLabel;
+                dom.confirmCancelBtn.textContent = cancelLabel;
+
+                dom.confirmModal.classList.add('visible');
+                Utils.trapFocus(dom.confirmModal);
+
+                return new Promise(resolve => {
+                    const onOk = () => {
+                        cleanUp(); resolve(true);
+                    };
+                    const onCancel = () => {
+                        cleanUp(); resolve(false);
+                    };
+                    const onEscape = (e) => {
+                        if (e.key === 'Escape') {
+                            cleanUp(); resolve(false);
+                        }
+                    };
+
+                    const cleanUp = () => {
+                        dom.confirmOkBtn.removeEventListener('click', onOk);
+                        dom.confirmCancelBtn.removeEventListener('click', onCancel);
+                        dom.confirmModal.removeEventListener('keydown', onEscape);
+                        dom.confirmModal.classList.remove('visible');
+                        Utils.releaseFocus();
+                    };
+
+                    dom.confirmOkBtn.addEventListener('click', onOk);
+                    dom.confirmCancelBtn.addEventListener('click', onCancel);
+                    dom.confirmModal.addEventListener('keydown', onEscape);
+                });
+            },
+
+            debounce: (func, delay) => {
+                let timeout;
+                return function(...args) {
+                    const context = this;
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => func.apply(context, args), delay);
+                };
+            },
+
+            // Calculates the effective next occurrence date for any event type and recurrence.
+            // Returns a 'YYYY-MM-DD' string or null if invalid.
+            getNextEffectiveDateForEvent: (event) => {
+                const today = new Date(); today.setHours(0,0,0,0);
+                
+                let initialDateStr;
+                // Determine the base date from event.date or event.originDate based on event type
+                if (event.type === 'general' || event.type === 'custom') { // Custom also behaves like general for date calc
+                    initialDateStr = event.date;
+                } else if (event.type === 'birthday' || event.type === 'anniversary') {
+                    initialDateStr = event.originDate;
+                }
+                
+                if (!initialDateStr) return null; 
+
+                const initialDate = new Date(initialDateStr + 'T00:00:00'); 
+                if (initialDate.toString() === 'Invalid Date') {
+                    console.error('Invalid initialDate for event:', event);
+                    return null; 
+                }
+                
+                let nextEffectiveDate = new Date(initialDate); 
+                nextEffectiveDate.setHours(0,0,0,0); // Normalize to midnight
+
+                const currentYear = today.getFullYear();
+                const currentMonth = today.getMonth();
+
+                if (event.type === 'birthday' || event.type === 'anniversary') {
+                    // For yearly events (birthday/anniversary are treated as yearly repeats)
+                    nextEffectiveDate = new Date(currentYear, initialDate.getMonth(), initialDate.getDate());
+                    
+                    // Adjust for date rollovers (e.g., if initial date is Feb 29 and current year is not leap)
+                    if (nextEffectiveDate.getMonth() !== initialDate.getMonth() && nextEffectiveDate.getDate() === 1) {
+                         nextEffectiveDate = new Date(currentYear, initialDate.getMonth() + 1, 0); // Last day of that specific month
+                    }
+
+                    // If this year's occurrence has passed, set to next year
+                    if (nextEffectiveDate < today) {
+                        nextEffectiveDate.setFullYear(currentYear + 1);
+                        if (nextEffectiveDate.getMonth() !== initialDate.getMonth() && nextEffectiveDate.getDate() === 1) { 
+                             nextEffectiveDate = new Date(currentYear + 1, initialDate.getMonth() + 1, 0);
+                        }
+                    }
+                } else { // 'general' or 'custom' event type
+                    switch (event.repeat) {
+                        case 'none':
+                            return initialDate < today ? null : initialDate.toISOString().slice(0, 10);
+                        case 'yearly': 
+                            nextEffectiveDate.setFullYear(currentYear); 
+                            if (nextEffectiveDate < today) nextEffectiveDate.setFullYear(currentYear + 1); 
+                            break;
+                        case 'monthly':
+                            const originalDay = initialDate.getDate();
+                            nextEffectiveDate = new Date(currentYear, currentMonth, originalDay);
+                            if (nextEffectiveDate.getMonth() !== currentMonth && nextEffectiveDate.getDate() === 1) {
+                                nextEffectiveDate = new Date(currentYear, currentMonth + 1, 0);
+                            }
+                            if (nextEffectiveDate < today) {
+                                nextEffectiveDate = new Date(currentYear, currentMonth + 1, originalDay);
+                                if (nextEffectiveDate.getMonth() !== ((currentMonth + 1) % 12) && nextEffectiveDate.getDate() === 1) {
+                                     nextEffectiveDate = new Date(currentYear, currentMonth + 2, 0);
+                                }
+                            }
+                            break;
+                        case 'weekly':
+                            const originalDayOfWeek = initialDate.getDay();
+                            let daysToAdd = (originalDayOfWeek - today.getDay() + 7) % 7;
+                            nextEffectiveDate = new Date(today);
+                            nextEffectiveDate.setDate(today.getDate() + daysToAdd);
+                            // If event's effective date is today but original date was earlier (already passed today)
+                            if (initialDate < today && daysToAdd === 0 && nextEffectiveDate.getTime() === today.getTime()) {
+                                nextEffectiveDate.setDate(nextEffectiveDate.getDate() + 7);
+                            }
+                            break;
+                    }
+                }
+                return nextEffectiveDate.toISOString().slice(0, 10);
+            },
+
+            // Calculates days until an event using its effective next date
+            calculateDaysUntil: (event) => {
+                const today = new Date(); today.setHours(0, 0, 0, 0);
+                const effectiveDateString = Utils.getNextEffectiveDateForEvent(event);
+                if (!effectiveDateString) return Infinity; // No valid effective date
+
+                const effectiveDate = new Date(effectiveDateString + 'T00:00:00'); 
+                if (effectiveDate.toString() === 'Invalid Date') {
+                    console.error('Invalid effectiveDate derived for:', event);
+                    return Infinity;
+                }
+                effectiveDate.setHours(0,0,0,0);
+                
+                // For one-time general or custom events, if the event's effective date is in the past, it's 'completed'
+                if ((event.type === 'general' || event.type === 'custom') && event.repeat === 'none' && effectiveDate < today) {
+                    return Infinity;
+                }
+                
+                return Math.round((effectiveDate - today) / (1000 * 60 * 60 * 24));
+            },
+
+            // Calculates exact age in years from a birthdate string (YYYY-MM-DD)
+            calculateAge: (birthDateString) => {
+                if (!birthDateString) return null;
+                const birthDate = new Date(birthDateString + 'T00:00:00');
+                if (birthDate.toString() === 'Invalid Date') return null;
+
+                const today = new Date();
+                today.setHours(0,0,0,0);
+                
+                // If birthDate is in the future, it means data is invalid for age calculation
+                if (birthDate > today) {
+                    return null;
+                }
+
+                let age = today.getFullYear() - birthDate.getFullYear();
+                const m = today.getMonth() - birthDate.getMonth();
+                if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                    age--;
+                }
+                return age;
+            },
+
+            // Calculates years of relation from a start date string (YYYY-MM-DD)
+            calculateYearsOfRelation: (startDateString) => {
+                if (!startDateString) return null;
+                const startDate = new Date(startDateString + 'T00:00:00');
+                if (startDate.toString() === 'Invalid Date') return null;
+
+                const today = new Date();
+                today.setHours(0,0,0,0);
+
+                // If startDate is in the future, it means data is invalid for years calculation
+                if (startDate > today) {
+                    return null;
+                }
+
+                let years = today.getFullYear() - startDate.getFullYear();
+                const m = today.getMonth() - startDate.getMonth();
+                if (m < 0 || (m === 0 && today.getDate() < startDate.getDate())) {
+                    years--;
+                }
+                return years;
+            },
+
+            trapFocus: (element) => {
+                const focusableElements = element.querySelectorAll('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
+                const firstFocusable = focusableElements[0];
+                const lastFocusable = focusableElements[focusableElements.length - 1];
+
+                if (firstFocusable) {
+                    Utils.lastFocusedElement = document.activeElement;
+                    firstFocusable.focus();
+                }
+
+                element.addEventListener('keydown', (e) => {
+                    if (e.key === 'Tab') {
+                        if (e.shiftKey) {
+                            if (document.activeElement === firstFocusable) {
+                                lastFocusable.focus();
+                                e.preventDefault();
+                            }
+                        } else {
+                            if (document.activeElement === lastFocusable) {
+                                firstFocusable.focus();
+                                e.preventDefault();
+                            }
+                        }
+                    }
+                });
+            },
+
+            releaseFocus: () => {
+                if (Utils.lastFocusedElement && document.body.contains(Utils.lastFocusedElement)) {
+                    Utils.lastFocusedElement.focus();
+                }
+                Utils.lastFocusedElement = null;
+            },
+
+            // Validation with optional extra validation function for date checks
+            validateInput: (inputElement, errorMessageElement, message, extraValidationFn = null) => {
+                // Determine if this input element should be validated at all
+                // If element is hidden AND it's not the custom label (which has special hidden logic), then skip
+                if (!inputElement || (inputElement.offsetParent === null && inputElement.id !== 'event-custom-type-label')) {
+                    inputElement?.classList.remove('invalid');
+                    errorMessageElement.textContent = '';
+                    inputElement?.setAttribute('aria-invalid', 'false');
+                    return true; 
+                }
+
+                // Special handling for the custom event label field
+                if (inputElement.id === 'event-custom-type-label' && dom.eventTypeInput.value !== 'custom') {
+                    inputElement.classList.remove('invalid');
+                    errorMessageElement.textContent = '';
+                    inputElement.setAttribute('aria-invalid', 'false');
+                    return true;
+                }
+
+                // 1. Check for empty value (required validation for visible fields)
+                if (!inputElement.value.trim()) {
+                    inputElement.classList.add('invalid');
+                    errorMessageElement.textContent = message;
+                    inputElement.setAttribute('aria-invalid', 'true');
+                    return false;
+                }
+                
+                // 2. Run optional extra validation (e.g., date formats, past dates)
+                if (extraValidationFn && !extraValidationFn(inputElement.value)) {
+                    inputElement.classList.add('invalid');
+                    errorMessageElement.textContent = message; 
+                    inputElement.setAttribute('aria-invalid', 'true');
+                    return false;
+                }
+
+                // All checks passed
+                inputElement.classList.remove('invalid');
+                errorMessageElement.textContent = '';
+                inputElement.setAttribute('aria-invalid', 'false');
+                return true;
+            }
+        };
+
+        // 5. Event Logic (CRUD, Import/Export, Theme Switching)
+        const EventLogic = {
+            handleFormSubmit: (e) => {
+                e.preventDefault();
+
+                dom.saveEventBtn.classList.add('loading'); // Show loading spinner
+                
+                try {
+                    const nameInput = dom.eventNameInput;
+                    const dateInput = dom.eventDateInput;
+                    const typeInput = dom.eventTypeInput;
+                    const customLabelInput = dom.eventCustomTypeLabelInput;
+                    
+                    const nameError = dom.eventNameError;
+                    const dateError = dom.eventDateError;
+                    const customLabelError = dom.eventCustomTypeLabelError;
+
+                    let isFormValid = true; // Overall form validity tracker
+
+                    // Execute all validation checks, do not short-circuit
+                    const nameIsValid = Utils.validateInput(nameInput, nameError, 'Event name is required.');
+                    if (!nameIsValid) isFormValid = false;
+
+                    const currentEventTypeSelected = typeInput.value;
+                    const today = new Date(); today.setHours(0,0,0,0); // Normalize today for date comparisons
+
+                    let dateIsValid = true;
+                    if (currentEventTypeSelected === 'general' || currentEventTypeSelected === 'custom') {
+                        dateIsValid = Utils.validateInput(dateInput, dateError, 'Date is required.');
+                    } else { // Birthday or Anniversary, dateInput serves as originDate
+                        dateIsValid = Utils.validateInput(
+                            dateInput,
+                            dateError,
+                            `${currentEventTypeSelected === 'birthday' ? 'Birthdate' : 'Start Date'} is required and must be today or in the past.`,
+                            (dateValue) => { 
+                                const inputDate = new Date(dateValue + 'T00:00:00');
+                                return inputDate.toString() !== 'Invalid Date' && inputDate <= today;
+                            }
+                        );
+                    }
+                    if (!dateIsValid) isFormValid = false;
+
+                    let customLabelIsValid = true;
+                    if (currentEventTypeSelected === 'custom') {
+                        customLabelIsValid = Utils.validateInput(customLabelInput, customLabelError, 'Custom label is required for custom events.');
+                    } else {
+                        // Crucially clear errors if custom type field is not applicable
+                        customLabelInput.classList.remove('invalid');
+                        customLabelError.textContent = '';
+                        customLabelInput.setAttribute('aria-invalid', 'false');
+                    }
+                    if (!customLabelIsValid) isFormValid = false;
+
+                    // If any validation failed, stop submission and provide detailed feedback
+                    if (!isFormValid) {
+                        Utils.showToast('Please correct the indicated errors in the form.', 'error', 'warning');
+                        const firstInvalidInput = dom.form.querySelector('input.invalid, textarea.invalid, select.invalid');
+                        if (firstInvalidInput) {
+                            firstInvalidInput.focus(); // Focus the first invalid field
+                        }
+                        return; // Stop submission
+                    }
+
+                    // Form is valid, proceed with data collection and save
+                    const id = state.currentEditId || Date.now();
+                    const tags = dom.eventTagsInput.value.split(',').map(t => t.trim()).filter(Boolean);
+                    const eventType = dom.eventTypeInput.value;
+
+                    // Construct event data object
+                    const eventData = {
+                        id: id,
+                        name: nameInput.value.trim(),
+                        tags: tags,
+                        priority: dom.eventPriorityInput.checked,
+                        tasks: dom.eventTasksInput.value.trim(),
+                        note: dom.eventNoteInput.value.trim(),
+                        type: eventType,
+                        customLabel: eventType === 'custom' ? customLabelInput.value.trim() : null,
+                        originDate: (eventType === 'birthday' || eventType === 'anniversary') ? dateInput.value : null,
+                        date: Utils.getNextEffectiveDateForEvent({
+                            type: eventType,
+                            originDate: (eventType === 'birthday' || eventType === 'anniversary') ? dateInput.value : null,
+                            date: (eventType === 'general' || eventType === 'custom') ? dateInput.value : null, 
+                            repeat: (eventType === 'general' || eventType === 'custom') ? dom.eventRepeatInput.value : 'yearly'
+                        }),
+                        repeat: (eventType === 'general' || eventType === 'custom') ? dom.eventRepeatInput.value : 'yearly' 
+                    };
+
+                    if (eventData.date === null) { 
+                        Utils.showToast('Could not determine a valid upcoming event date. Please verify your date and event type settings.', 'error');
+                        return;
+                    }
+
+                    // Perform Add or Edit based on currentEditId
+                    if (state.currentEditId) {
+                        state.editEvent(id, eventData);
+                        Utils.showToast('Event updated!', 'success');
+                    } else {
+                        state.addEvent(eventData);
+                        Utils.showToast('Event added!', 'success');
+                        if (window.confetti) { // Trigger celebration confetti for new additions
+                            window.confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+                        }
+                    }
+                    
+                    dom.eventModal.classList.remove('visible'); // Close the modal
+                    Utils.releaseFocus(); // Restore focus to element before modal opened
+
+                } catch (error) {
+                    console.error("Error during event form submission:", error);
+                    Utils.showToast("An unexpected error occurred. Please check the console for details.", "error");
+                } finally {
+                    dom.saveEventBtn.classList.remove('loading'); // Ensure loading spinner is always removed
+                }
+            },
+
+            handleListAction: (e) => {
+                const btn = e.target.closest('.btn');
+                if (!btn) return;
+
+                const card = e.target.closest('.event-card');
+                const id = parseInt(card.dataset.id);
+                const event = state.getEventById(id);
+
+                if (!event) {
+                    Utils.showToast('Event not found!', 'error');
+                    Render.renderList(); // Refresh the list if an item disappeared
+                    return;
+                }
+
+                if (btn.classList.contains('edit-btn')) {
+                    Render.showEventModal(true, event);
+                } else if (btn.classList.contains('delete-btn')) {
+                    Utils.showConfirm({
+                        title: 'Delete Event?',
+                        text: `Are you sure you want to delete "${event.name}"?<br>This action cannot be undone.`,
+                        okLabel: 'Delete',
+                        cancelLabel: 'Keep Event'
+                    }).then(ok => {
+                        if (ok) {
+                            card.classList.add('deleting'); // Apply deleting animation class
+                            card.addEventListener('transitionend', () => {
+                                // Once the CSS transition completes, then actually delete the event from state
+                                state.deleteEvent(id); 
+                                // Re-rendering happens after state change
+                                Utils.showToast('Event deleted. We\'ll miss it!', 'info', 'face-sad'); // Show sad emoji toast
+                            }, { once: true }); // Ensure this listener fires only once
+                        }
+                    });
+                }
+            },
+
+            handleImport: async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const text = await file.text();
+                e.target.value = ''; // Clear the file input
+
+                try {
+                    const imported = JSON.parse(text);
+                    if (!Array.isArray(imported)) {
+                        throw new Error('Invalid file format: JSON content is not an array.');
+                    }
+
+                    // Define valid types and repeats for strict import validation
+                    const validEventTypes = ['general', 'birthday', 'anniversary', 'custom'];
+                    const validRepeats = ['yearly', 'monthly', 'weekly', 'none'];
+                    const today = new Date(); today.setHours(0,0,0,0);
+
+                    // Filter and sanitize imported events
+                    const validEvents = imported.filter(event => 
+                        typeof event.name === 'string' && event.name.trim() !== '' &&
+                        validEventTypes.includes(event.type) && // Ensure event type is valid
+                        (
+                            // Date validation logic based on event type
+                            (event.type === 'general' || event.type === 'custom') ? 
+                                (typeof event.date === 'string' && new Date(event.date + 'T00:00:00').toString() !== 'Invalid Date' && validRepeats.includes(event.repeat)) :
+                            (event.type === 'birthday' || event.type === 'anniversary') ? 
+                                (typeof event.originDate === 'string' && new Date(event.originDate + 'T00:00:00').toString() !== 'Invalid Date' && new Date(event.originDate + 'T00:00:00') <= today && event.repeat === 'yearly') :
+                                false // Catch unrecognized event types with false
+                        )
+                        // Custom event-specific validation: must have a non-empty customLabel if type is 'custom'
+                        && (event.type !== 'custom' || (event.type === 'custom' && typeof event.customLabel === 'string' && event.customLabel.trim() !== ''))
+                    ).map(event => {
+                        // Map valid events to ensure consistent structure, provide fallbacks
+                        const sanitizedEvent = {
+                            id: event.id || Date.now() + Math.random(), // Keep original ID or assign new random ID
+                            name: String(event.name).trim(),
+                            type: String(event.type),
+                            customLabel: event.type === 'custom' && typeof event.customLabel === 'string' ? String(event.customLabel).trim() : null, // Store custom label
+                            originDate: (event.type === 'birthday' || event.type === 'anniversary') ? String(event.originDate || '') : null,
+                            repeat: validRepeats.includes(event.repeat) ? String(event.repeat) : (['birthday', 'anniversary'].includes(event.type) ? 'yearly' : 'none'),
+                            tags: Array.isArray(event.tags) ? event.tags.map(t => String(t).trim()).filter(Boolean) : [],
+                            priority: typeof event.priority === 'boolean' ? event.priority : false,
+                            tasks: typeof event.tasks === 'string' ? String(event.tasks).trim() : '',
+                            note: typeof event.note === 'string' ? String(event.note).trim() : ''
+                        };
+                        // Calculate and set the 'date' field (next effective date) after parsing
+                        sanitizedEvent.date = Utils.getNextEffectiveDateForEvent({
+                            type: sanitizedEvent.type,
+                            originDate: sanitizedEvent.originDate,
+                            date: (sanitizedEvent.type === 'general' || sanitizedEvent.type === 'custom') ? (event.date ? String(event.date) : null) : null,
+                            repeat: sanitizedEvent.repeat
+                        });
+                        return sanitizedEvent;
+                    });
+
+
+                    if (validEvents.length === 0) {
+                        Utils.showToast('No valid events found in the imported file. Check format and required fields.', 'error');
+                        return;
+                    }
+
+                    // Confirm merge or replace
+                    const merge = await Utils.showConfirm({
+                        title: 'Import Data',
+                        text: `Found ${validEvents.length} valid events. Do you want to <strong>MERGE</strong> them with existing data? <br>Choosing "Cancel" will <strong>REPLACE</strong> all existing data.`,
+                        okLabel: 'Merge Data',
+                        cancelLabel: 'Replace All'
+                    });
+
+                    if (merge) {
+                        const existingIds = new Set(state.events.map(e => e.id));
+                        const newEventsToAdd = validEvents.filter(imp => !existingIds.has(imp.id));
+                        state.updateEvents([...state.events, ...newEventsToAdd]);
+                        Utils.showToast(`${newEventsToAdd.length} new event(s) merged successfully.`, 'success');
+                    } else {
+                        state.updateEvents(validEvents);
+                        Utils.showToast(`Data replaced with ${validEvents.length} event(s).`, 'success');
+                    }
+                } catch (err) {
+                    console.error('Import Error:', err);
+                    Utils.showToast(`Import failed: ${err.message || 'The file could not be processed. Make sure it is valid JSON.'}`, 'error');
+                }
+            },
+
+            handleExport: () => {
+                if (!state.events.length) {
+                    Utils.showToast('No data to export.', 'error');
+                    return;
+                }
+                const filename = `dashboard-backup-${new Date().toISOString().slice(0, 10)}.json`;
+                const jsonStr = JSON.stringify(state.events, null, 2); // Pretty print JSON
+                const blob = new Blob([jsonStr], { type: "application/json" });
+                
+                // Create a temporary link element to trigger download
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = filename;
+                document.body.appendChild(a); // Required for Firefox for programmatic clicks
+                a.click();
+                document.body.removeChild(a); // Clean up the temporary element
+                URL.revokeObjectURL(a.href); // Release the object URL
+                Utils.showToast('Events exported successfully.', 'success');
+            },
+
+            handleClearAll: async () => {
+                const confirmed = await Utils.showConfirm({
+                    title: 'Clear All Data?',
+                    text: 'This will permanently delete all events. This action cannot be undone and your exported backup file might be necessary.',
+                    okLabel: 'Yes, Delete All',
+                    cancelLabel: 'No, Keep Data'
+                });
+                if (confirmed) {
+                    state.updateEvents([]); // Clear the events array
+                    Utils.showToast('All data has been cleared.', 'info');
+                }
+            },
+
+            applyTheme: (theme) => {
+                document.body.className = `${theme}-theme`; // Apply theme class to body
+                dom.themeLightBtn.classList.toggle('active', theme === 'light');
+                dom.themeDarkBtn.classList.toggle('active', theme === 'dark');
+                dom.themeLightBtn.setAttribute('aria-checked', theme === 'light');
+                dom.themeDarkBtn.setAttribute('aria-checked', theme === 'dark');
+                localStorage.setItem(CONFIG.THEME_LS_KEY, theme); // Save theme preference
+            },
+
+            // New: Handles changes in the event type dropdown to show/hide relevant fields
+            handleEventTypeChange: () => {
+                const eventType = dom.eventTypeInput.value;
+                const eventDateLabel = dom.eventDateLabel;
+                const eventDateInput = dom.eventDateInput;
+                const eventRepeatGroup = dom.eventRepeatGroup;
+                const eventCustomTypeGroup = dom.eventCustomTypeGroup;
+                const eventCustomTypeLabelInput = dom.eventCustomTypeLabelInput;
+
+                // Reset all visibility and placeholders first
+                eventDateLabel.textContent = 'Date';
+                eventDateInput.placeholder = 'YYYY-MM-DD';
+                eventRepeatGroup.classList.remove('hidden'); // Show repeat by default
+                eventCustomTypeGroup.classList.add('hidden'); // Hide custom label by default
+                eventCustomTypeLabelInput.value = ''; // Clear custom label input
+                
+                // Explicitly clear validation errors for dynamically changed fields
+                eventDateInput.classList.remove('invalid');
+                dom.eventDateError.textContent = '';
+                eventDateInput.setAttribute('aria-invalid', 'false');
+
+                eventCustomTypeLabelInput.classList.remove('invalid');
+                dom.eventCustomTypeLabelError.textContent = '';
+                eventCustomTypeLabelInput.setAttribute('aria-invalid', 'false');
+
+
+                // Apply logic based on selected event type
+                if (eventType === 'birthday') {
+                    eventDateLabel.textContent = 'Birthdate';
+                    eventDateInput.placeholder = 'YYYY-MM-DD (e.g. 1990-05-15)';
+                    eventRepeatGroup.classList.add('hidden'); // Hide repeat for birthdays
+                } else if (eventType === 'anniversary') {
+                    eventDateLabel.textContent = 'Start Date';
+                    eventDateInput.placeholder = 'YYYY-MM-DD (e.g. 2010-09-01)';
+                    eventRepeatGroup.classList.add('hidden'); // Hide repeat for anniversaries
+                } else if (eventType === 'custom') {
+                    // For custom event, both date and a custom label are needed
+                    eventDateInput.placeholder = 'YYYY-MM-DD (e.g. 2024-07-20)';
+                    eventCustomTypeGroup.classList.remove('hidden'); // Show custom label input
+                    eventCustomTypeLabelInput.focus(); // Immediately focus the new field for user convenience
+                } else { // 'general' type is the default state after reset
+                    // Default placeholders and visibility are already handled
+                }
+            }
+        };
+
+        // 6. Rendering Logic (DOM updates, view switching, reminders)
+        const Render = {
+            getFilteredAndSortedEvents: () => {
+                const searchTerm = dom.search.value.toLowerCase();
+                const tagFilter = dom.filterTag.value;
+            
+                // Perform a deep copy of events before filtering to avoid direct mutation
+                const filtered = JSON.parse(JSON.stringify(state.events)).filter(e => {
+                    const searchMatch = !searchTerm ||
+                                        e.name.toLowerCase().includes(searchTerm) ||
+                                        (e.note && e.note.toLowerCase().includes(searchTerm)) ||
+                                        (e.tasks && e.tasks.toLowerCase().includes(searchTerm)) ||
+                                        (e.customLabel && e.customLabel.toLowerCase().includes(searchTerm)) || // Search customLabel field
+                                        e.tags.some(t => t.toLowerCase().includes(searchTerm)); // Search also in tags
+                    const tagMatch = tagFilter === 'all' || e.tags.includes(tagFilter);
+                    return searchMatch && tagMatch;
+                });
+                // Sort by days until, ascending (closest events first)
+                return filtered.sort((a, b) => Utils.calculateDaysUntil(a) - Utils.calculateDaysUntil(b));
+            },
+
+            renderList: () => {
+                const eventsToRender = Render.getFilteredAndSortedEvents();
+                
+                // Use a document fragment for efficient DOM manipulation
+                const fragment = document.createDocumentFragment();
+                let todayEventsExist = false;
+
+                eventsToRender.forEach((event, index) => {
+                    const daysUntil = Utils.calculateDaysUntil(event);
+                    const isToday = daysUntil === 0;
+
+                    if(isToday) todayEventsExist = true;
+
+                    let countdownHTML;
+                    let countdownLabelHTML;
+                    if(daysUntil === 1) { countdownHTML = '1'; countdownLabelHTML = 'Day Left'; }
+                    else if (isToday) { countdownHTML = "Today!"; countdownLabelHTML = "Happy Celebration"; }
+                    else if (daysUntil === Infinity) { countdownHTML = '-'; countdownLabelHTML = 'Completed'; }
+                    else { countdownHTML = daysUntil.toString(); countdownLabelHTML = 'Days Left'; }
+
+                    const card = document.createElement('div');
+                    card.className = `event-card ${isToday ? 'today-event' : ''} ${event.priority ? 'priority-event' : ''}`;
+                    card.dataset.id = event.id; // Store ID for event delegation
+                    card.setAttribute('tabindex', '0'); // Make card focusable for keyboard navigation
+                    card.setAttribute('role', 'listitem'); // Semantically indicates list item
+                    card.setAttribute('aria-label', `Event: ${event.name}, ${countdownHTML} ${countdownLabelHTML}`);
+                    card.style.setProperty('--animation-order', index); // Used for staggered entry animation
+
+                    const tagsHtml = event.tags.map(tag => `<span class="tag">${tag}</span>`).join('');
+                    
+                    let eventIconForTitle = ''; // Icon to display next to name (e.g. cake, heart, tag for custom)
+                    let displayDateValue = event.date; // Date to format for display
+                    let subTextHTML = ''; // Age/Years/Custom label text below formatted date
+
+                    if (event.type === 'birthday') {
+                        eventIconForTitle = 'ph-cake';
+                        const age = Utils.calculateAge(event.originDate);
+                        subTextHTML = `<p class="event-info-subtext"><i class="ph ph-cake" aria-hidden="true"></i>${age !== null ? `${age} yrs old` : 'Age N/A'}</p>`;
+                        displayDateValue = event.originDate; // For birthday, display original birthdate
+                    } else if (event.type === 'anniversary') {
+                        eventIconForTitle = 'ph-heartbeat';
+                        const years = Utils.calculateYearsOfRelation(event.originDate);
+                        subTextHTML = `<p class="event-info-subtext"><i class="ph ph-heartbeat" aria-hidden="true"></i>${years !== null ? `${years} yrs` : 'Years N/A'}</p>`;
+                        displayDateValue = event.originDate; // For anniversary, display original start date
+                    } else if (event.type === 'custom' && event.customLabel) {
+                        eventIconForTitle = 'ph-tag-simple'; // Custom tag icon
+                        subTextHTML = `<p class="event-info-subtext"><i class="ph ph-hash" aria-hidden="true"></i>${event.customLabel}</p>`;
+                        // For custom events, the event.date is already the next effective date or static, so it's fine.
+                        displayDateValue = event.date;
+                    } else if ((event.type === 'general' || event.type === 'custom') && event.repeat === 'none' && daysUntil === Infinity) {
+                        // For one-time general/custom events that are in the past, still show their original static date
+                        displayDateValue = event.date;
+                    } else {
+                         displayDateValue = event.date; // Default to the event.date property for display for general upcoming events
+                    }
+                    
+                    // Format the relevant date for display (displayDateValue)
+                    const formattedDate = displayDateValue ? new Date(displayDateValue + 'T00:00:00').toLocaleDateString(undefined, {weekday:'long', year:'numeric', month:'long', day:'numeric'}) : 'Date Not Set';
+
+                    const detailsSection = (event.tasks || event.note) ? `
+                        <div class="event-details">
+                            ${event.tasks ? `<h4>Tasks / Ideas:</h4><p class="tasks">${event.tasks}</p>` : ''}
+                            ${event.note ? `<h4 style="margin-top:0.75rem;">Note:</h4><p class="note">${event.note}</p>`:''}
+                        </div>
+                    ` : '';
+
+                    card.innerHTML = `
+                        <div class="event-card-header">
+                            <div class="event-card-title">
+                                <h3>
+                                    ${event.priority ? '<i class="ph-fill ph-star priority-icon" title="High Priority" aria-hidden="true"></i>' : ''}
+                                    ${eventIconForTitle ? `<i class="ph-bold ${eventIconForTitle}" title="${event.type}" aria-hidden="true"></i>` : ''}
+                                    ${event.name}
+                                </h3>
+                                <p>${formattedDate}</p>
+                                ${subTextHTML}
+                            </div>
+                            <div>
+                                <div class="countdown" aria-live="polite" aria-atomic="true">${countdownHTML}</div>
+                                <div class="countdown-label">${countdownLabelHTML}</div>
+                            </div>
+                        </div>
+                        ${tagsHtml ? `<div class="event-tags" aria-label="Tags">${tagsHtml}</div>` : ''}
+                        ${detailsSection}
+                        <div class="card-actions">
+                             <button class="btn secondary-btn edit-btn" aria-label="Edit ${event.name}">Edit</button>
+                             <button class="btn secondary-btn delete-btn" aria-label="Delete ${event.name}">Delete</button>
+                        </div>
+                    `;
+                    fragment.appendChild(card);
+                });
+
+                // Clear current list and append newly created cards
+                dom.listView.innerHTML = '';
+                dom.listView.appendChild(fragment);
+
+                // Add highlight animation to the just edited card, if applicable
+                if (state.justEditedEventId) {
+                    const editedCard = dom.listView.querySelector(`[data-id="${state.justEditedEventId}"]`);
+                    if (editedCard) {
+                        editedCard.classList.add('highlight');
+                        // Remove highlight class after animation completes
+                        editedCard.addEventListener('animationend', () => {
+                            editedCard.classList.remove('highlight');
+                            state.justEditedEventId = null; // Clear ID after handling
+                        }, { once: true });
+                    }
+                }
+
+                // Show/hide "No events" message based on if any events are left after filtering
+                dom.noEventsMsg.classList.toggle('hidden', eventsToRender.length > 0);
+
+                // Trigger celebration confetti if there are events happening today
+                if (todayEventsExist && !document.body.classList.contains('confetti-active')) {
+                    document.body.classList.add('confetti-active');
+                    if (window.confetti) { // Ensure confetti.js library is loaded
+                        window.confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } });
+                    }
+                    setTimeout(() => document.body.classList.remove('confetti-active'), 5000); // Remove confetti after 5 seconds
+                }
+            },
+
+            // Removed renderCalendar function
+
+            updateTagFilterOptions: () => {
+                const allTags = state.events.flatMap(e => e.tags); // Get all tags from all events
+                const uniqueSortedTags = [...new Set(allTags)].sort(); // Get unique and sort alphabetically
+
+                const selectedTag = dom.filterTag.value; // Remember currently selected tag
+
+                // Build new options HTML, always including 'All Tags' option
+                dom.filterTag.innerHTML = `<option value="all">All Tags</option>${uniqueSortedTags.map(t => `<option value="${t}">${t}</option>`).join('')}`;
+                
+                // Restore the previously selected tag if it still exists in the new options
+                if (Array.from(dom.filterTag.options).some(option => option.value === selectedTag)) {
+                    dom.filterTag.value = selectedTag;
+                } else {
+                    dom.filterTag.value = 'all'; // Default to "All Tags" if selected tag is no longer available
+                }
+            },
+            
+            updateReminderBar: () => {
+                // Filter for events that are happening today or within the next 7 days, sorted by closeness
+                const upcoming = state.events
+                                        .map(e => ({...e, days: Utils.calculateDaysUntil(e)}))
+                                        .filter(e => e.days >= 0 && e.days <= 7 && e.days !== Infinity) // Ensure event is not completed and has upcoming days
+                                        .sort((a,b) => a.days - b.days);
+
+                if(upcoming.length > 0){
+                    const next = upcoming[0]; // Get the very next event
+                    let prefixContent = '';
+                    let iconHtml = '';
+                    let eventNameStyled = ''; // Holds the name + type for display in highlight
+
+                    if (next.type === 'birthday') {
+                        iconHtml = '<i class="ph-fill ph-cake" aria-hidden="true"></i>';
+                        eventNameStyled = `${next.name}'s Birthday`;
+                    } else if (next.type === 'anniversary') {
+                        iconHtml = '<i class="ph-fill ph-heartbeat" aria-hidden="true"></i>';
+                        eventNameStyled = `${next.name}'s Anniversary`;
+                    } else if (next.priority) {
+                        iconHtml = '<i class="ph-fill ph-star" aria-hidden="true"></i>'; // High priority event
+                        eventNameStyled = next.name;
+                    } else {
+                         iconHtml = '<i class="ph-fill ph-bell-simple" aria-hidden="true"></i>'; // Generic reminder icon
+                         eventNameStyled = next.name;
+                    }
+
+                    let messageSuffix = '';
+
+                    if (next.days === 0) {
+                        prefixContent = '✨ Today:';
+                        messageSuffix = '! 🎉';
+                    } else if (next.days === 1) {
+                        prefixContent = '⏳ Tomorrow:';
+                        messageSuffix = '.';
+                    } else {
+                        prefixContent = '🔔 Reminder:';
+                        messageSuffix = ` is in ${next.days} days.`;
+                    }
+
+                    // Combining using template literals and ensuring explicit spaces where needed
+                    // The .highlight-text is an inline-flex element, which makes it a single unit for wrapping.
+                    dom.reminderContent.innerHTML = `${prefixContent} <span class="highlight-text">${iconHtml} ${eventNameStyled}</span>${messageSuffix}`;
+                    dom.reminderBar.classList.add('visible');
+                    dom.reminderBar.setAttribute('aria-hidden', 'false');
+                } else {
+                    dom.reminderBar.classList.remove('visible'); // Hide if no upcoming events
+                    dom.reminderBar.setAttribute('aria-hidden', 'true');
+                }
+            },
+
+            // renderAll simplified to always call renderList
+            renderAll: () => {
+                Render.updateTagFilterOptions();
+                Render.renderList();
+                Render.updateReminderBar();
+            },
+
+            // switchView simplified: it effectively always switches to list view
+            switchView: (view) => { // 'view' parameter kept for consistency with original signature
+                state.currentView = 'list'; // Always set to list
+                dom.listView.classList.remove('hidden'); // Ensure list view is visible
+
+                // Update active button styles for the view switcher (only list button now)
+                dom.viewListBtn.classList.add('active'); // List button is always active
+                dom.viewListBtn.setAttribute('aria-checked', 'true'); // List button is always checked
+
+                // Removed calendar button related toggles as the button no longer exists
+
+                Render.renderAll(); // Re-render the UI based on the new (forced) view
+            },
+
+            showEventModal: (isEdit = false, event = {}) => {
+                // Reset form fields to default state and clear validation errors
+                dom.form.reset();
+                dom.form.querySelectorAll('.invalid').forEach(el => el.classList.remove('invalid'));
+                dom.form.querySelectorAll('.error-message').forEach(el => el.textContent = '');
+
+                state.currentEditId = isEdit ? event.id : null; // Set currentEditId if in edit mode
+                dom.modalTitle.textContent = isEdit ? 'Edit Event' : 'Add New Event'; // Update modal title
+
+                // Set default values before populating for new/edited forms
+                dom.eventTypeInput.value = 'general';
+                dom.eventRepeatInput.value = 'yearly';
+                dom.eventDateInput.value = ''; // Clear date field
+                dom.eventDateInput.placeholder = 'YYYY-MM-DD'; // Set default placeholder for date
+
+                if(isEdit) {
+                    dom.eventNameInput.value = event.name || '';
+                    dom.eventTypeInput.value = event.type || 'general'; // Retain existing event type
+
+                    // Populate date and recurrence based on event type for editing
+                    if (event.type === 'general' || event.type === 'custom') { 
+                        dom.eventDateInput.value = event.date || ''; // For general/custom, populate with `date`
+                        dom.eventRepeatInput.value = event.repeat || 'yearly'; // Retain original repeat value
+                        if (event.type === 'custom') { // If it's a custom type, populate customLabel too
+                             dom.eventCustomTypeLabelInput.value = event.customLabel || '';
+                        }
+                    } else { // Birthday or Anniversary
+                        dom.eventDateInput.value = event.originDate || ''; // For these, populate with `originDate`
+                        dom.eventRepeatInput.value = 'yearly'; // Forced yearly for these types
+                    }
+                    dom.eventTagsInput.value = (event.tags || []).join(', ');
+                    dom.eventPriorityInput.checked = event.priority || false;
+                    dom.eventTasksInput.value = event.tasks || '';
+                    dom.eventNoteInput.value = event.note || '';
+                } else {
+                    // For new events, set date input to tomorrow by default
+                    const tomorrow = new Date();
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    dom.eventDateInput.value = tomorrow.toISOString().slice(0, 10);
+                }
+
+                // Call event type change handler to correctly adjust labels and field visibility
+                // based on the loaded or default event type.
+                EventLogic.handleEventTypeChange(); 
+
+                dom.eventModal.classList.add('visible'); // Make the modal visible
+                Utils.trapFocus(dom.eventModal); // Trap keyboard focus within modal
+            }
+        };
+
+        // 7. Main Application Initialization
+        // This function orchestrates the setup of the application when the DOM is ready.
+        function initializeDomElements() {
+            // Cache DOM elements for efficient access throughout the application.
+            Object.assign(dom, {
+                listView: Utils.getEl('list-view'),
+                reminderBar: Utils.getEl('reminder-bar'),
+                reminderContent: document.querySelector('#reminder-bar .reminder-content'), // NEW: Cache inner content
+                eventModal: Utils.getEl('event-modal'),
+                form: Utils.getEl('event-form'),
+                modalTitle: Utils.getEl('modal-title'),
+                confirmModal: Utils.getEl('confirm-modal'),
+                confirmTitle: Utils.getEl('confirm-title'),
+                confirmText: Utils.getEl('confirm-text'),
+                confirmOkBtn: Utils.getEl('confirm-ok-btn'),
+                confirmCancelBtn: Utils.getEl('confirm-cancel-btn'),
+                search: Utils.getEl('search-input'),
+                filterTag: Utils.getEl('filter-tag'),
+                noEventsMsg: Utils.getEl('no-events-message'),
+                viewListBtn: Utils.getEl('view-list-btn'),
+                toastContainer: Utils.getEl('toast-container'),
+                themeLightBtn: Utils.getEl('theme-light-btn'),
+                themeDarkBtn: Utils.getEl('theme-dark-btn'),
+                addEventBtn: Utils.getEl('add-event-btn'),
+                exportBtn: Utils.getEl('export-btn'),
+                importBtn: Utils.getEl('import-btn'),
+                importFile: Utils.getEl('import-file'),
+                clearAllBtn: Utils.getEl('clear-all-btn'),
+                saveEventBtn: Utils.getEl('save-event-btn'),
+                
+                // Form specific inputs & their labels/error divs
+                eventNameInput: Utils.getEl('event-name'),
+                eventTypeInput: Utils.getEl('event-type'),
+                eventDateInput: Utils.getEl('event-date'),
+                eventDateLabel: document.querySelector('#date-group-dynamic label[for="event-date"]'), // Direct reference for label element
+                eventRepeatInput: Utils.getEl('event-repeat'),
+                eventRepeatGroup: Utils.getEl('event-repeat-group'),
+                // New custom event label elements
+                eventCustomTypeGroup: Utils.getEl('event-custom-type-group'),
+                eventCustomTypeLabelInput: Utils.getEl('event-custom-type-label'),
+                eventCustomTypeLabelError: Utils.getEl('event-custom-type-label-error'),
+
+                eventTagsInput: Utils.getEl('event-tags'),
+                eventPriorityInput: Utils.getEl('event-priority'),
+                eventTasksInput: Utils.getEl('event-tasks'),
+                eventNoteInput: Utils.getEl('event-note'),
+                eventNameError: Utils.getEl('event-name-error'),
+                eventDateError: Utils.getEl('event-date-error')
+            });
+        }
+
+        // Sets up all necessary event listeners for user interactions
+        function setupEventListeners() {
+            dom.addEventBtn.addEventListener('click', () => Render.showEventModal());
+
+            // Main form submission handler
+            dom.form.addEventListener('submit', EventLogic.handleFormSubmit);
+            // Close modal when cancel button is clicked or outside modal content area
+            dom.eventModal.addEventListener('click', (e) => {
+                if (e.target.dataset.action === 'cancel' || e.target === dom.eventModal) {
+                    dom.eventModal.classList.remove('visible');
+                    Utils.releaseFocus();
+                }
+            });
+            // Close modal when Escape key is pressed
+            dom.eventModal.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    dom.eventModal.classList.remove('visible');
+                    Utils.releaseFocus();
+                }
+            });
+
+            // Add real-time validation on blur/input for crucial fields
+            dom.eventNameInput.addEventListener('blur', () => {
+                Utils.validateInput(dom.eventNameInput, dom.eventNameError, 'Event name is required.');
+            });
+            dom.eventDateInput.addEventListener('change', () => { // Use change for date input
+                const currentEventTypeSelected = dom.eventTypeInput.value;
+                const today = new Date(); today.setHours(0,0,0,0);
+                if (currentEventTypeSelected === 'general' || currentEventTypeSelected === 'custom') {
+                    Utils.validateInput(dom.eventDateInput, dom.eventDateError, 'Date is required.');
+                } else {
+                     Utils.validateInput(
+                        dom.eventDateInput,
+                        dom.eventDateError,
+                        `${currentEventTypeSelected === 'birthday' ? 'Birthdate' : 'Start Date'} is required and must be today or in the past.`,
+                        (dateValue) => { 
+                            const inputDate = new Date(dateValue + 'T00:00:00');
+                            return inputDate.toString() !== 'Invalid Date' && inputDate <= today;
+                        }
+                    );
+                }
+            });
+            dom.eventCustomTypeLabelInput.addEventListener('blur', () => {
+                if (!dom.eventCustomTypeGroup.classList.contains('hidden')) { // Only validate if visible
+                    Utils.validateInput(dom.eventCustomTypeLabelInput, dom.eventCustomTypeLabelError, 'Custom label is required for custom events.');
+                }
+            });
+
+            // Event delegation on the list view for 'Edit' and 'Delete' buttons on cards
+            dom.listView.addEventListener('click', EventLogic.handleListAction);
+
+            // Theme switching event listeners
+            dom.themeLightBtn.addEventListener('click', () => EventLogic.applyTheme('light'));
+            dom.themeDarkBtn.addEventListener('click', () => EventLogic.applyTheme('dark'));
+
+            // View switching event listeners (only list view is an option now)
+            dom.viewListBtn.addEventListener('click', () => Render.switchView('list'));
+
+            // Input listener for search bar with debouncing for performance
+            const debouncedRenderAll = Utils.debounce(Render.renderAll, 300);
+            dom.search.addEventListener('input', debouncedRenderAll);
+            // Change listener for tag filter dropdown
+            dom.filterTag.addEventListener('change', Render.renderAll);
+
+            // Listener for event type changes (general, birthday, anniversary, custom)
+            dom.eventTypeInput.addEventListener('change', EventLogic.handleEventTypeChange);
+
+            // Data Import/Export/Clear functionality buttons
+            dom.exportBtn.addEventListener('click', EventLogic.handleExport);
+            dom.importBtn.addEventListener('click', () => dom.importFile.click()); // Programmatically click hidden file input
+            dom.importFile.addEventListener('change', EventLogic.handleImport);
+            dom.clearAllBtn.addEventListener('click', EventLogic.handleClearAll);
+
+            // Set up a periodic check for the reminder bar (every minute)
+            setInterval(Render.updateReminderBar, CONFIG.REMINDER_INTERVAL_MS);
+        }
+
+        // Main initialization function that runs when DOM is fully loaded
+        function init() {
+            initializeDomElements(); // Cache all necessary DOM elements
+            // Load initial state from Local Storage (if any), otherwise use empty array
+            state.events = JSON.parse(localStorage.getItem(CONFIG.LS_KEY)) || [];
+            setupEventListeners(); // Attach all user interaction event handlers
+            EventLogic.applyTheme(localStorage.getItem(CONFIG.THEME_LS_KEY) || 'dark'); // Apply saved theme or default
+            Render.renderAll(); // Initial render of the UI based on loaded state and default view
+        }
+        
+        // Execute the main initialization function when the DOM is ready
+        init();
+
+    }); // End of DOMContentLoaded listener
+    </script>
+</body>
+</html>
